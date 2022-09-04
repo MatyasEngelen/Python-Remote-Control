@@ -38,7 +38,7 @@ def retreive_screenshot(conn,sock):
                 sock.close()
                 break
 
-def main(host=socket.gethostname(), port=65432):
+def main(host="0.0.0.0", port=65432):
     
     print(host)
     while True:
