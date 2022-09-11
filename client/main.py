@@ -2,6 +2,7 @@ from socket import socket
 from zlib import decompress
 import pygame
 from datahandler import sendMessage
+from threading import Thread
 
 sock = socket()
 WIDTH = 1900
@@ -17,39 +18,9 @@ def recvall(conn, length):
         buf += data
     return buf
 
-def main(port=65432):
-    host = input('Enter host name: ')
-    pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    clock = pygame.time.Clock()
-    watching = True    
-    MouseLC = 0
-
-    sock.connect((host, port))
-    try:
-        while watching:
-
-            if pygame.mouse.get_pressed()[0]:
-                MouseLC += 1
-                if MouseLC >= 3:
-                    print("hold")
-                    mess = "hold:{}".format(str(pygame.mouse.get_pos()))
-                    sendMessage(sock, str(mess))
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    watching = False
-                    break
-                #register click
-                if event.type == pygame.MOUSEBUTTONUP:
-                    if MouseLC > 3:
-                        MouseLC = 0
-                    else:
-                        MouseLC = 0
-                        print("click")
-                        mess = "click:{}".format(str(pygame.mouse.get_pos()))
-                        sendMessage(sock, str(mess))
-
+def receiveVideo(screen,clock):
+    while True:
+        try:
             # Retreive the size of the pixels length, the pixels length and pixels
             size_len = int.from_bytes(sock.recv(1), byteorder='big')
             size = int.from_bytes(sock.recv(size_len), byteorder='big')
@@ -62,6 +33,58 @@ def main(port=65432):
             screen.blit(img, (0, 0))
             pygame.display.flip()
             clock.tick(60)
+        except:
+            break
+
+def main(port=65432):
+    host = input('Enter host name: ')
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    clock = pygame.time.Clock()
+    watching = True    
+    MouseLC = 0
+    mouseOldPres = 0
+    IsClick = False
+
+    sock.connect((host, port))
+
+    thread = Thread(target=receiveVideo, args=(screen,clock,))
+    thread.start()
+    try:
+        while watching:
+
+            if pygame.mouse.get_pressed()[0]:
+                mousePres = pygame.mouse.get_pos()
+                if MouseLC == 0:
+                    mouseOldPres = mousePres
+                    MouseLC += 1
+                else:
+                    if mouseOldPres != mousePres:
+                        print("hold")
+                        mess = "hold:{}".format(str(pygame.mouse.get_pos()))
+                        sendMessage(sock, str(mess))
+                        mouseOldPres = mousePres
+                    else:
+                        IsClick = True
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    watching = False
+                    break
+                #register click
+                if event.type == pygame.MOUSEBUTTONUP:
+                    MouseLC = 0
+                    if IsClick:
+                        IsClick = False
+                        print("click")
+                        mess = "click:{}".format(str(pygame.mouse.get_pos()))
+                        sendMessage(sock, str(mess))
+
+                if event.type == pygame.KEYDOWN:
+
+                    user_text = event.unicode
+                    Bmess = "key:{}".format(user_text)
+                    sendMessage(sock, str(Bmess))  
     finally:
         sock.close()
 
