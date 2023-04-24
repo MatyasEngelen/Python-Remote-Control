@@ -1,5 +1,6 @@
 from socket import socket
-from zlib import decompress
+#from zlib import decompress
+from blosc import decompress
 import pygame
 from datahandler import sendMessage
 from threading import Thread
@@ -51,8 +52,10 @@ def main(port=65432):
     thread = Thread(target=receiveVideo, args=(screen,clock,))
     thread.start()
     try:
+        #On the main thread the communication of commands will continue
         while watching:
 
+            #check if the user is clicking or holding the mouse
             if pygame.mouse.get_pressed()[0]:
                 mousePres = pygame.mouse.get_pos()
                 if MouseLC == 0:
@@ -71,7 +74,7 @@ def main(port=65432):
                 if event.type == pygame.QUIT:
                     watching = False
                     break
-                #register click
+                #register click, we need the mouse up event for this.
                 if event.type == pygame.MOUSEBUTTONUP:
                     MouseLC = 0
                     if IsClick:

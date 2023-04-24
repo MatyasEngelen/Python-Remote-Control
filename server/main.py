@@ -1,9 +1,11 @@
 from asyncio.windows_events import NULL
 import socket
 from threading import Thread
-from zlib import compress
+#from zlib import compress
 from mss import mss
 from datahandler import messageSort
+from blosc import compress
+from PIL import Image
 
 WIDTH = 1900
 HEIGHT = 1000
@@ -19,8 +21,9 @@ def retreive_screenshot(conn,sock):
                 print('open')
                 # Capture the screen
                 img = sct.grab(rect)
-                # Tweak the compression level here (0-9)
-                pixels = compress(img.rgb, 6)
+
+                #compression
+                pixels = compress(img.rgb)
 
                 # Send the size of the pixels length
                 size = len(pixels)
