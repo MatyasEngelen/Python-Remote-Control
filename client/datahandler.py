@@ -33,6 +33,14 @@ class Commands:
                         else:
                             self.IsClick = True
 
+                if pygame.mouse.get_pressed()[2]:
+                    command = struct.pack("!B", 3)
+                    x, y = pygame.mouse.get_pos()
+                    x = struct.pack("!i", x)
+                    y = struct.pack("!i", y)
+                    mess = command + x + y
+                    sendMessage(self.sock, mess)
+
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         for i in [i for i,x in enumerate(globals.active_threads) if x == thread_hash]:

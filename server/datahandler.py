@@ -45,6 +45,16 @@ def mouse_click(decode):
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,location_x,location_y,0,0)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,location_x,location_y,0,0)
 
+def mouse_rclick(decode):
+    location_x: int = decode.read_i32()
+    location_y: int = decode.read_i32()
+    print("Location: " + str(location_x) + " | " + str(location_y))
+    #pyautogui.mouseUp()
+    win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP,location_x,location_y,0,0)
+    win32api.SetCursorPos((location_x,location_y))
+    win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN,location_x,location_y,0,0)
+    win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP,location_x,location_y,0,0)
+
 def mouse_move(decode):
     location_x: int = decode.read_i32()
     location_y: int = decode.read_i32()
@@ -64,7 +74,10 @@ def command_handler(data):
                 mouse_click(decode)
             case 2:
                 print("mouse hold")
-                mouse_click(decode)
+                mouse_move(decode)
+            case 3:
+                print("left click")
+                mouse_rclick(decode)
 
 #Outgoing
 def connection_message(conn):

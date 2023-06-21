@@ -8,8 +8,6 @@ todo:
 Will rework this to just use the minimal amount of bytes.
 +/- done
 
--Client thread watchdog
-
 -Monitor switching/scaling
 
 
