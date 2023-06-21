@@ -1,95 +1,72 @@
 from socket import socket
 #from zlib import decompress
-from blosc import decompress
-import pygame
-from datahandler import sendMessage
+
+from datahandler import *
 from threading import Thread
+import globals
+from video_handler import receiveVideo
+import sys
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtWidgets import *
+import pygame
+from screeninfo import get_monitors
+
+
+#Get window size
+WIDTH = 1280
+HEIGHT = 720
+
+for m in get_monitors():
+    if m.is_primary:
+        WIDTH = m.width
+        #-40 to solve pygame's wacky fullscreen
+        HEIGHT = m.height - 40
+
 
 sock = socket()
-WIDTH = 1900
-HEIGHT = 1000
 
-def recvall(conn, length):
-    """ Retreive all pixels. """
-    buf = b''
-    while len(buf) < length:
-        data = conn.recv(length - len(buf))
-        if not data:
-            return data
-        buf += data
-    return buf
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+    
+        self.setWindowTitle("MENG Remote")
+        self.setFixedSize(QSize(300, 200))
+        self.MainUI()
 
-def receiveVideo(screen,clock):
-    while True:
+        self.Qlabel_log = "Log:"
+
+        
+    def start_connection(self):
+        pygame.init()
+        screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+        clock = pygame.time.Clock()
+        ip = self.InsertTxtName.text()
         try:
-            # Retreive the size of the pixels length, the pixels length and pixels
-            size_len = int.from_bytes(sock.recv(1), byteorder='big')
-            size = int.from_bytes(sock.recv(size_len), byteorder='big')
-            pixels = decompress(recvall(sock, size))
-
-            # Create the Surface from raw pixels
-            img = pygame.image.fromstring(pixels, (WIDTH, HEIGHT), 'RGB')
-
-            # Display the picture
-            screen.blit(img, (0, 0))
-            pygame.display.flip()
-            clock.tick(60)
+            sock.connect((ip, 65432))
+            connection_message(sock)
         except:
-            break
+            print("err")
+            return "Error"
+        globals.watching = True
+        Thread(target=receiveVideo, args=(screen,clock,pygame,sock,WIDTH,HEIGHT,), daemon=True).start()
+        Thread(target=Commands(sock).command_handler, args=(pygame,), daemon=True).start() 
+            
 
-def main(port=65432):
-    host = input('Enter host name: ')
-    pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    clock = pygame.time.Clock()
-    watching = True    
-    MouseLC = 0
-    mouseOldPres = 0
-    IsClick = False
+    def MainUI(self):
+        self.InsertLabelName = QLabel("Device / IP:", self)
+        self.InsertLabelName.setGeometry(5, 5, 500, 60)
+        self.InsertTxtName = QLineEdit(self)
+        self.InsertTxtName.move(75, 25)
+        self.InsertTxtName.resize(150,20)
 
-    sock.connect((host, port))
-
-    thread = Thread(target=receiveVideo, args=(screen,clock,))
-    thread.start()
-    try:
-        #On the main thread the communication of commands will continue
-        while watching:
-
-            #check if the user is clicking or holding the mouse
-            if pygame.mouse.get_pressed()[0]:
-                mousePres = pygame.mouse.get_pos()
-                if MouseLC == 0:
-                    mouseOldPres = mousePres
-                    MouseLC += 1
-                else:
-                    if mouseOldPres != mousePres:
-                        print("hold")
-                        mess = "hold:{}".format(str(pygame.mouse.get_pos()))
-                        sendMessage(sock, str(mess))
-                        mouseOldPres = mousePres
-                    else:
-                        IsClick = True
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    watching = False
-                    break
-                #register click, we need the mouse up event for this.
-                if event.type == pygame.MOUSEBUTTONUP:
-                    MouseLC = 0
-                    if IsClick:
-                        IsClick = False
-                        print("click")
-                        mess = "click:{}".format(str(pygame.mouse.get_pos()))
-                        sendMessage(sock, str(mess))
-
-                if event.type == pygame.KEYDOWN:
-
-                    user_text = event.unicode
-                    Bmess = "key:{}".format(user_text)
-                    sendMessage(sock, str(Bmess))  
-    finally:
-        sock.close()
+        self.MainBtn = QPushButton('CONNECT', self)
+        self.MainBtn.setGeometry(75, 50, 150, 35)
+        self.MainBtn.clicked.connect(lambda: self.start_connection())
 
 if __name__ == '__main__':
-    main()
+    app = QApplication(sys.argv)
+
+    window = MainWindow()
+    window.show()
+
+    app.exec()
