@@ -12,8 +12,8 @@ class Commands:
         self.mouseOldPres = 0
         self.IsClick = False
 
-    def command_handler(self, pygame):
-            while globals.watching:
+    def command_handler(self, pygame, thread_hash):
+            while thread_hash in globals.active_threads:
                 #check if the user is clicking or holding the mouse
                 if pygame.mouse.get_pressed()[0]:
                     mousePres = pygame.mouse.get_pos()
@@ -35,7 +35,8 @@ class Commands:
 
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        globals.watching = False
+                        for i in [i for i,x in enumerate(globals.active_threads) if x == thread_hash]:
+                            del globals.active_threads[i]
                         break
                     #register click, we need the mouse up event for this.
                     if event.type == pygame.MOUSEBUTTONUP:

@@ -20,6 +20,7 @@ def main(host="0.0.0.0", port=65432):
     while True:
         print('loop')
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((host, port))
         sock.listen(1)
       #  try:
@@ -43,7 +44,7 @@ def main(host="0.0.0.0", port=65432):
         #Start input commands on main thread
         while threadStart and 'connected':
             try:
-                data = conn.recv(1024)
+                data = conn.recv(50)
                 if not data:
                     print("no data")
                 command_handler(data)
@@ -51,6 +52,7 @@ def main(host="0.0.0.0", port=65432):
                 print("recv err")
                 recvErr += 1
                 if recvErr >= 20:
+                    sock.close()
                     break
             finally:
                 sock.close()

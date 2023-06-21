@@ -12,8 +12,8 @@ def recvall(conn, length):
         buf += data
     return buf
 
-def receiveVideo(screen,clock,pygame,sock,WIDTH,HEIGHT):
-    while globals.watching:
+def receiveVideo(screen,clock,pygame,sock,WIDTH,HEIGHT,thread_hash):
+    while thread_hash in globals.active_threads:
         try:
             # Retreive the size of the pixels length, the pixels length and pixels
             size_len = int.from_bytes(sock.recv(1), byteorder='big')
@@ -34,7 +34,6 @@ def receiveVideo(screen,clock,pygame,sock,WIDTH,HEIGHT):
             pygame.display.flip()
             clock.tick(60)
         except:
-            print("hmmm")
             break
     pygame.display.quit()
     pygame.quit()

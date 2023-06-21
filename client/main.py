@@ -1,16 +1,14 @@
-from socket import socket
-#from zlib import decompress
-
+import socket
 from datahandler import *
 from threading import Thread
 import globals
 from video_handler import receiveVideo
 import sys
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QSize
 from PyQt6.QtWidgets import *
 import pygame
 from screeninfo import get_monitors
-
+import secrets
 
 #Get window size
 WIDTH = 1280
@@ -21,9 +19,6 @@ for m in get_monitors():
         WIDTH = m.width
         #-40 to solve pygame's wacky fullscreen
         HEIGHT = m.height - 40
-
-
-sock = socket()
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -37,19 +32,28 @@ class MainWindow(QMainWindow):
 
         
     def start_connection(self):
-        pygame.init()
-        screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-        clock = pygame.time.Clock()
+        sock = socket.socket()
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
         ip = self.InsertTxtName.text()
-        try:
-            sock.connect((ip, 65432))
-            connection_message(sock)
-        except:
-            print("err")
-            return "Error"
-        globals.watching = True
-        Thread(target=receiveVideo, args=(screen,clock,pygame,sock,WIDTH,HEIGHT,), daemon=True).start()
-        Thread(target=Commands(sock).command_handler, args=(pygame,), daemon=True).start() 
+        error = False
+
+        #try:
+        sock.connect((ip, 65432))
+        connection_message(sock)
+        #except:
+        print("err")
+        error = False
+        if error == False:
+            print("thread start")
+            pygame.init()
+            screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+            clock = pygame.time.Clock()
+
+            thread_hash = str(secrets.token_urlsafe(16))
+            globals.active_threads.append(thread_hash)
+            Thread(target=receiveVideo, args=(screen,clock,pygame,sock,WIDTH,HEIGHT,thread_hash,), daemon=True).start()
+            Thread(target=Commands(sock).command_handler, args=(pygame,thread_hash,), daemon=True).start()
             
 
     def MainUI(self):
