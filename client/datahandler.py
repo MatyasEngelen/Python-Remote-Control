@@ -6,11 +6,14 @@ def sendMessage(sock, data):
 
 class Commands:
 
-    def __init__(self, sock):
+    def __init__(self, sock,WIDTH,HEIGHT):
         self.sock = sock
         self.MouseLC = 0
         self.mouseOldPres = 0
         self.IsClick = False
+        print(globals.monitor_in_use)
+        self.scale_value_x = globals.monitor_in_use[0] / WIDTH
+        self.scale_value_y = globals.monitor_in_use[1] / HEIGHT
 
     def command_handler(self, pygame, thread_hash):
             while thread_hash in globals.active_threads:
@@ -25,8 +28,8 @@ class Commands:
                             print("hold")
                             command = struct.pack("!B", 2)
                             x, y = pygame.mouse.get_pos()
-                            x = struct.pack("!i", x)
-                            y = struct.pack("!i", y)
+                            x = struct.pack("!i", (int(x * self.scale_value_x)))
+                            y = struct.pack("!i", (int(y * self.scale_value_y)))
                             mess = command + x + y
                             sendMessage(self.sock, mess)
                             self.mouseOldPres = mousePres
@@ -36,8 +39,8 @@ class Commands:
                 if pygame.mouse.get_pressed()[2]:
                     command = struct.pack("!B", 3)
                     x, y = pygame.mouse.get_pos()
-                    x = struct.pack("!i", x)
-                    y = struct.pack("!i", y)
+                    x = struct.pack("!i", (int(x * self.scale_value_x)))
+                    y = struct.pack("!i", (int(y * self.scale_value_y)))
                     mess = command + x + y
                     sendMessage(self.sock, mess)
 
@@ -54,8 +57,10 @@ class Commands:
                             print("click")
                             command = struct.pack("!B", 1)
                             x, y = pygame.mouse.get_pos()
-                            x = struct.pack("!i", x)
-                            y = struct.pack("!i", y)
+                            print(x*self.scale_value_x)
+                            print(y*self.scale_value_y)
+                            x = struct.pack("!i", (int(x * self.scale_value_x)))
+                            y = struct.pack("!i", (int(y * self.scale_value_y)))
                             mess = command + x + y
                             sendMessage(self.sock, mess)
 
@@ -63,7 +68,7 @@ class Commands:
 
                         user_text = event.unicode
                         Bmess = "key:{}".format(user_text)
-                        sendMessage(self.sock, str(Bmess))  
+                        print(str(Bmess))  
             self.sock.close()
 
 #incomming
@@ -105,6 +110,20 @@ def connection_message(sock):
     sock_ilength = decode_l.read_i32()
     sock_mess = sock.recv((sock_ilength * 4))
 
+    Primary_found = False
+    Primary_Count = 0
     decode_m = ByteBuffer(sock_mess)
     for x in range(sock_ilength):
-        globals.monitors.append(decode_m.read_i32())
+        data = decode_m.read_i32()
+        globals.monitors.append(data)
+
+        if x == 1:
+            Primary_found = True
+
+        if Primary_found:
+            globals.monitor_in_use.append(data)
+            Primary_Count += 1
+            if Primary_Count == 2:
+                Primary_found = False
+    
+    print(globals.monitor_in_use)

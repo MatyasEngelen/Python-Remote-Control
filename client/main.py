@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
             thread_hash = str(secrets.token_urlsafe(16))
             globals.active_threads.append(thread_hash)
             Thread(target=receiveVideo, args=(screen,clock,pygame,sock,WIDTH,HEIGHT,thread_hash,), daemon=True).start()
-            Thread(target=Commands(sock).command_handler, args=(pygame,thread_hash,), daemon=True).start()
+            Thread(target=Commands(sock,WIDTH,HEIGHT).command_handler, args=(pygame,thread_hash,), daemon=True).start()
             
 
     def MainUI(self):
