@@ -1,6 +1,6 @@
-from screeninfo import get_monitors
-for m in get_monitors():
-    if m.is_primary:
-        print(str(m.width) + " " + str(m.height))
+import keyboard
 
-print(get_monitors())
+while True:
+    if keyboard.read_key() != "":
+        print(keyboard.read_key())
+        print(ord(keyboard.read_key())

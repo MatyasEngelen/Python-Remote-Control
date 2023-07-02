@@ -1,5 +1,6 @@
 import struct
 import globals
+import keyboard
 
 def sendMessage(sock, data):
     sock.sendall(data)
@@ -11,64 +12,93 @@ class Commands:
         self.MouseLC = 0
         self.mouseOldPres = 0
         self.IsClick = False
+        self.holding = False
         print(globals.monitor_in_use)
         self.scale_value_x = globals.monitor_in_use[0] / WIDTH
         self.scale_value_y = globals.monitor_in_use[1] / HEIGHT
 
     def command_handler(self, pygame, thread_hash):
             while thread_hash in globals.active_threads:
-                #check if the user is clicking or holding the mouse
-                if pygame.mouse.get_pressed()[0]:
-                    mousePres = pygame.mouse.get_pos()
-                    if self.MouseLC == 0:
-                        self.mouseOldPres = mousePres
-                        self.MouseLC += 1
-                    else:
-                        if self.mouseOldPres != mousePres:
-                            print("hold")
-                            command = struct.pack("!B", 2)
-                            x, y = pygame.mouse.get_pos()
-                            x = struct.pack("!i", (int(x * self.scale_value_x)))
-                            y = struct.pack("!i", (int(y * self.scale_value_y)))
-                            mess = command + x + y
-                            sendMessage(self.sock, mess)
+              #  try:
+                    #check if the user is clicking or holding the mouse
+                    if pygame.mouse.get_pressed()[0]:
+                        mousePres = pygame.mouse.get_pos()
+                        if self.MouseLC == 0:
                             self.mouseOldPres = mousePres
+                            self.MouseLC += 1
                         else:
-                            self.IsClick = True
+                            if self.mouseOldPres != mousePres:
+                                print("hold")
+                                command = struct.pack("!B", 2)
+                                x, y = pygame.mouse.get_pos()
+                                x = struct.pack("!i", (int(x * self.scale_value_x)))
+                                y = struct.pack("!i", (int(y * self.scale_value_y)))
+                                mess = command + x + y
+                                sendMessage(self.sock, mess)
+                                self.mouseOldPres = mousePres
+                                self.holding = True
+                            else:
+                                self.IsClick = True
 
-                if pygame.mouse.get_pressed()[2]:
-                    command = struct.pack("!B", 3)
-                    x, y = pygame.mouse.get_pos()
-                    x = struct.pack("!i", (int(x * self.scale_value_x)))
-                    y = struct.pack("!i", (int(y * self.scale_value_y)))
-                    mess = command + x + y
-                    sendMessage(self.sock, mess)
+                    if pygame.mouse.get_pressed()[2]:
+                        command = struct.pack("!B", 3)
+                        x, y = pygame.mouse.get_pos()
+                        x = struct.pack("!i", (int(x * self.scale_value_x)))
+                        y = struct.pack("!i", (int(y * self.scale_value_y)))
+                        mess = command + x + y
+                        sendMessage(self.sock, mess)
 
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        for i in [i for i,x in enumerate(globals.active_threads) if x == thread_hash]:
-                            del globals.active_threads[i]
-                        break
-                    #register click, we need the mouse up event for this.
-                    if event.type == pygame.MOUSEBUTTONUP:
-                        self.MouseLC = 0
-                        if self.IsClick:
-                            self.IsClick = False
-                            print("click")
-                            command = struct.pack("!B", 1)
-                            x, y = pygame.mouse.get_pos()
-                            print(x*self.scale_value_x)
-                            print(y*self.scale_value_y)
-                            x = struct.pack("!i", (int(x * self.scale_value_x)))
-                            y = struct.pack("!i", (int(y * self.scale_value_y)))
-                            mess = command + x + y
-                            sendMessage(self.sock, mess)
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            for i in [i for i,x in enumerate(globals.active_threads) if x == thread_hash]:
+                                del globals.active_threads[i]
+                            break
+                        #register click, we need the mouse up event for this.
+                        if event.type == pygame.MOUSEBUTTONUP:
+                            self.MouseLC = 0
 
-                    if event.type == pygame.KEYDOWN:
+                            #send click
+                            if self.IsClick and self.holding == False:
+                                self.IsClick = False
+                                print("click")
+                                command = struct.pack("!B", 1)
+                                x, y = pygame.mouse.get_pos()
+                                x = struct.pack("!i", (int(x * self.scale_value_x)))
+                                y = struct.pack("!i", (int(y * self.scale_value_y)))
+                                mess = command + x + y
+                                sendMessage(self.sock, mess)
+                            
+                            #send the end of the hold
+                            if self.holding:
+                                command = struct.pack("!B", 5)
+                                x, y = pygame.mouse.get_pos()
+                                x = struct.pack("!i", (int(x * self.scale_value_x)))
+                                y = struct.pack("!i", (int(y * self.scale_value_y)))
+                                mess = command + x + y
+                                sendMessage(self.sock, mess)
+                                self.holding = False
 
-                        user_text = event.unicode
-                        Bmess = "key:{}".format(user_text)
-                        print(str(Bmess))  
+                        #send key strokes
+                        if event.type == pygame.KEYDOWN:
+                            if keyboard.read_key() != "":
+                                command = struct.pack("!B", 4)
+                                user_text = keyboard.read_key()
+                                Bmess = command + user_text.encode('utf8')
+                                print("ord teext= " + user_text)
+                                print(str(Bmess))  
+                                sendMessage(self.sock, Bmess)
+
+                    ''' if event.type == pygame.KEYDOWN:
+                            command = struct.pack("!B", 4)
+                            user_text = event.unicode
+                            print("user teext= " + user_text)
+                            if user_text != "":
+                                Bmess = command + struct.pack("!B",ord(user_text))
+                                print("ord teext= " + str(ord(user_text)))
+                                print(str(Bmess))  
+                                sendMessage(self.sock, Bmess)'''
+               #╔ except:
+                 #   print("Datahandler error")
             self.sock.close()
 
 #incomming

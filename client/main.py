@@ -42,7 +42,7 @@ class MainWindow(QMainWindow):
         sock.connect((ip, 65432))
         connection_message(sock)
         #except:
-        print("err")
+        #print("err")
         error = False
         if error == False:
             print("thread start")
